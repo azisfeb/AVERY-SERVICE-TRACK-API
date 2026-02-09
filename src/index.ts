@@ -1,8 +1,8 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import authRouter from './routes/auth';
-import { verifyJWT } from './middleware/jwt';
-import { createClient } from '@supabase/supabase-js';
+import { verifySupabaseJWT } from './middleware/jwt';
+import { supabase } from './lib/supabase';
 
 dotenv.config();
 
@@ -11,16 +11,18 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 
-// Initialize Supabase client for possible DB interactions
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_KEY || '';
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
 // Public routes
 app.use('/auth', authRouter);
+app.use('/auth/refresh', require('./routes/refresh').default);
 
-// Protected example route
-app.get('/api/health', verifyJWT, (_req, res) => {
+// Example admin-only route
+import requireAdmin from './middleware/roles';
+app.get('/api/admin-only', verifySupabaseJWT, requireAdmin, (_req, res) => {
+  res.json({ secret: 'only admins see this' });
+});
+
+// Protected example route using Supabase JWT verification
+app.get('/api/health', verifySupabaseJWT, (_req, res) => {
   res.json({ status: 'ok', service: 'avery-service-track-api' });
 });
 
